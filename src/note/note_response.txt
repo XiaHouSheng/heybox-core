@@ -1,0 +1,10 @@
+GetQrCode
+{
+  "status": "ok",
+  "msg": "",
+  "version": "1.0",
+  "result": {
+    "qr_url": "https://api.xiaoheihe.cn/account/qr_login/?qr=fe46bc80-5021-11f1-a775-d66c7816f5b7&app=web",
+    "expire": 120
+  }
+}

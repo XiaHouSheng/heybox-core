@@ -6,7 +6,7 @@ from GetSendTokenTest import *
 
 dotenv.load_dotenv()
 
-result_test = generate_send_token_origin()
+result_test = generate_send_token_origin("/bbs/app/comment/create")
 print(result_test)
 hkey = result_test["hkey"]
 nonce = result_test["nonce"]

@@ -12,10 +12,16 @@ API_URL = "https://api.xiaoheihe.cn/bbs/app/user/message"
 # 请求头：包含Cookie（鉴权）+ 浏览器标识（模拟正常访问）
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
-    "Cookie": os.getenv("COOKIE")
+    "Cookie": os.getenv("COOKIE"),
+    "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+    "host": "api.xiaoheihe.cn",
+    "Referer": "https://www.xiaoheihe.cn/",
+    "Origin": "https://www.xiaoheihe.cn",
+    "Accept": "application/json, text/plain, */*"
+    
 }
 
-result_test = generate_send_token_origin()
+result_test = generate_send_token_origin("/bbs/app/user/message")
 print(result_test)
 hkey = result_test["hkey"]
 nonce = result_test["nonce"]
