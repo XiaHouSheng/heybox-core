@@ -1,0 +1,2 @@
+class CookieExpiredError(ValueError):
+    pass

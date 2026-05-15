@@ -8,3 +8,5 @@ GetQrCode
     "expire": 120
   }
 }
+CheckToken
+{"status":"failed","msg":"","version":"1.0","result":{}}

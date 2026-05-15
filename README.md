@@ -1,29 +1,52 @@
 # Heybox Core
 
-小黑盒机器人核心 - 基于 Python | The core of Heybox bot based on Python
+小黑盒机器人核心 - 基于 Python | Heybox Bot Core based on Python
 
 ## 项目简介
 
-本项目是小黑盒（Heybox）社区的 API 封装与自动化工具，提供发送评论、获取消息等核心功能。
+Heybox Core 是一个功能完整的小黑盒（Heybox）社区机器人框架，支持消息监听、事件处理、自动回复等核心功能。
 
 ## 功能特性
 
-- ✅ 生成请求签名（hkey、nonce、timestamp）
-- ✅ 发送评论到小黑盒社区
-- ✅ 获取用户消息列表
-- ✅ 支持环境变量配置敏感信息
+- ✅ 请求签名生成（hkey、nonce、timestamp）
+- ✅ 消息轮询与事件分发
+- ✅ @消息自动回复
+- ✅ 消息去重机制
+- ✅ Cookie 有效期检测
+- ✅ 完整的日志系统
 
 ## 项目结构
 
 ```
 heybox-core/
 ├── src/
-│   ├── encoder_cli/
-│   │   └── process_origin.js    # 签名生成核心逻辑
-│   └── test/
-│       ├── SendMessageTest.py  # 发送消息测试
-│       ├── GetSendTokenTest.py # 获取Token测试
-│       └── AtGetTest.py        # 获取@消息测试
+│   ├── main/                    # 主程序目录
+│   │   ├── Event/              # 事件系统
+│   │   │   ├── dispatcher.py   # 事件分发器
+│   │   │   └── events.py       # 事件定义
+│   │   ├── Log/                # 日志模块
+│   │   │   ├── __init__.py
+│   │   │   └── logger.py       # 日志配置
+│   │   ├── Message/            # 消息构建
+│   │   │   ├── __init__.py
+│   │   │   └── builder.py      # 消息构建器
+│   │   ├── Net/                # 网络请求
+│   │   │   ├── __init__.py
+│   │   │   └── builder.py      # 请求构建器
+│   │   ├── Utils/              # 工具类
+│   │   │   ├── __init__.py
+│   │   │   ├── check.py        # 环境检查
+│   │   │   ├── dedup.py        # 去重处理
+│   │   │   ├── error.py        # 错误定义
+│   │   │   └── keygen.py       # 签名生成
+│   │   ├── caches/             # 缓存目录
+│   │   │   └── msg/            # 消息缓存
+│   │   ├── bot.py              # 机器人主入口
+│   │   └── poller.py           # 消息轮询器
+│   ├── encoder_cli/            # JavaScript加密逻辑
+│   │   └── process_origin.js   # 签名生成核心
+│   ├── note/                   # 备注文件
+│   └── test/                   # 测试脚本
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -42,7 +65,7 @@ pip install requests python-dotenv PyExecJS
 
 ## 配置说明
 
-在项目根目录创建 `.env` 文件，配置以下环境变量：
+在项目根目录创建 `.env` 文件：
 
 ```env
 # 用户Cookie（从浏览器获取）
@@ -53,43 +76,71 @@ HEYBOX_ID=your_heybox_id
 
 # 设备ID
 DEVICE_ID=your_device_id
+
+# 轮询间隔（秒）
+POLL_INTERVAL=10
 ```
 
-## 使用示例
+## 快速开始
 
-### 发送评论
+### 启动机器人
+
+```bash
+cd src/main
+python bot.py
+```
+
+### 发送消息示例
 
 ```python
-from GetSendTokenTest import generate_send_token_origin
+from Message.builder import MessageBuilder
+from Net.builder import SendMessageReqBuilder
 
-# 生成签名
-token = generate_send_token_origin()
-hkey = token["hkey"]
-nonce = token["nonce"]
-_time = token["_time"]
+# 创建消息
+msg = MessageBuilder()
+msg.text("你好").link_id(123456).root_id(-1).reply_id(-1)
 
-# 发送评论逻辑...
+# 发送消息
+sender = SendMessageReqBuilder("https://api.xiaoheihe.cn/bbs/app/comment/create")
+sender.send(msg)
 ```
 
-### 获取消息
+### 事件监听
 
 ```python
-from GetSendTokenTest import generate_send_token_origin
+from Event.dispatcher import on
+from Event.events import EventAt
 
-# 生成签名并请求消息接口
-token = generate_send_token_origin()
-# 请求消息逻辑...
+@on("at")
+def handleAt(event: EventAt):
+    print(f"收到@消息: {event.message_id}")
+    # 处理逻辑...
 ```
 
-## API 说明
+## 核心模块说明
 
-### 核心方法
+### Event 模块
 
-| 方法 | 说明 | 返回值 |
-|------|------|--------|
-| `generate_send_token_origin()` | 生成请求签名 | `{hkey, nonce, _time}` |
+| 事件类型 | 说明 |
+|----------|------|
+| `EventAt` | 收到@消息时触发 |
 
-### 支持的接口
+### Utils 模块
+
+| 工具类 | 说明 |
+|--------|------|
+| `keygen.py` | 生成 API 请求签名 |
+| `check.py` | 环境变量和 Cookie 检查 |
+| `dedup.py` | 消息去重处理 |
+
+### Net 模块
+
+| 类 | 说明 |
+|----|------|
+| `SendMessageReqBuilder` | 发送消息请求构建器 |
+| `PollerReqBuilder` | 轮询请求构建器 |
+
+## API 接口
 
 | 接口 | 方法 | 说明 |
 |------|------|------|
@@ -101,6 +152,7 @@ token = generate_send_token_origin()
 1. ⚠️ 请妥善保管你的 Cookie，避免泄露
 2. ⚠️ 使用本工具请遵守小黑盒社区规定
 3. ⚠️ 请勿进行高频请求，避免账号被封禁
+4. ⚠️ 建议设置合理的轮询间隔（10秒以上）
 
 ## License
 
