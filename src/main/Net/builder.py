@@ -1,14 +1,22 @@
 import os
+import logging
 import requests
+from requests.exceptions import RequestException, JSONDecodeError
 from Utils.keygen import generate_send_token_origin
 from Event.events import EventAt
 from Utils.dedup import deduplicator
+
+log = logging.getLogger(__name__)
 
 class ReqBuilder:
     def __init__(self, url):
         self.url = url
         self.data = None
-        keys = generate_send_token_origin(url)
+        try:
+            keys = generate_send_token_origin(url)
+        except Exception as e:
+            log.error("生成签名失败: {}".format(e))
+            raise
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
             "Cookie": os.getenv("COOKIE"),
@@ -50,11 +58,35 @@ class ReqBuilder:
         return self
     
     def get(self):
-        self.data = self.session.get(self.url, data=self.data).json()
+        try:
+            response = self.session.get(self.url, data=self.data, timeout=30)
+            log.debug("GET {} - 状态码: {}".format(self.url, response.status_code))
+            self.data = response.json()
+        except RequestException as e:
+            log.error("网络请求失败 [GET] {}: {}".format(self.url, e))
+            raise
+        except JSONDecodeError as e:
+            log.error("JSON解析失败 [GET] {}: {}".format(self.url, e))
+            raise
+        except Exception as e:
+            log.error("未知错误 [GET] {}: {}".format(self.url, e))
+            raise
         return self
     
     def post(self):
-        self.data = self.session.post(self.url, data=self.data).json()
+        try:
+            response = self.session.post(self.url, data=self.data, timeout=30)
+            log.debug("POST {} - 状态码: {}".format(self.url, response.status_code))
+            self.data = response.json()
+        except RequestException as e:
+            log.error("网络请求失败 [POST] {}: {}".format(self.url, e))
+            raise
+        except JSONDecodeError as e:
+            log.error("JSON解析失败 [POST] {}: {}".format(self.url, e))
+            raise
+        except Exception as e:
+            log.error("未知错误 [POST] {}: {}".format(self.url, e))
+            raise
         return self
 
 class QrCodeReqBuilder(ReqBuilder):
@@ -77,9 +109,14 @@ class SendMessageReqBuilder(ReqBuilder):
         super().__init__(url)
     
     def send(self, message, message_id):
-        self.body(message.build()).build().post()
-        deduplicator.addDeduplicated(str(message_id))
-        deduplicator.save()
+        try:
+            self.body(message.build()).build().post()
+            deduplicator.addDeduplicated(str(message_id))
+            deduplicator.save()
+            log.info("消息发送成功 - MessageID: {}".format(message_id))
+        except Exception as e:
+            log.error("消息发送失败 - MessageID: {}: {}".format(message_id, e))
+            raise
 
 class PollerReqBuilder(ReqBuilder):
     def __init__(self, url):
@@ -94,8 +131,14 @@ class PollerReqBuilder(ReqBuilder):
 
     def convertToEvents(self):
         events = []
-        for item in self.data["result"]["messages"]:
-            event = EventAt()
-            event.build(item)
-            events.append(event)
+        try:
+            messages = self.data.get("result", {}).get("messages", [])
+            for item in messages:
+                event = EventAt()
+                event.build(item)
+                events.append(event)
+        except (KeyError, TypeError) as e:
+            log.error("解析消息列表失败: {}".format(e))
+        except Exception as e:
+            log.error("转换事件时发生未知错误: {}".format(e))
         return events
