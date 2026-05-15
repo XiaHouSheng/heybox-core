@@ -2,6 +2,7 @@ import os
 import requests
 from Utils.keygen import generate_send_token_origin
 from Event.events import EventAt
+from Utils.dedup import deduplicator
 
 class ReqBuilder:
     def __init__(self, url):
@@ -19,7 +20,7 @@ class ReqBuilder:
         }
         self.params = {
             "os_type": "web",
-            "app": "heybox",
+            "app": "web",
             "client_type": "web",
             "version": "999.0.4",
             "web_version": "2.5",
@@ -33,6 +34,9 @@ class ReqBuilder:
             "_time": keys["_time"],
             "nonce": keys["nonce"]
         }
+    
+    def clear_cookie(self):
+        self.headers.pop("Cookie", None)
 
     def body(self, data):
         self.data = data
@@ -53,14 +57,29 @@ class ReqBuilder:
         self.data = self.session.post(self.url, data=self.data).json()
         return self
 
+class QrCodeReqBuilder(ReqBuilder):
+    def __init__(self, url):
+        super().__init__(url)
+        self.clear_cookie()
+
+class GetQrStatusReqBuilder(ReqBuilder):
+    def __init__(self, url):
+        super().__init__(url)
+        self.params["device_id"] = ""
+        self.clear_cookie()
+    
+    def get(self, qr_code_id: str):
+        self.params["qr"] = qr_code_id
+        return super().get()
+
 class SendMessageReqBuilder(ReqBuilder):
     def __init__(self, url):
         super().__init__(url)
     
-    def send(self, Message):
-        self.body(Message.build())
-        self.build()
-        self.post()
+    def send(self, message, message_id):
+        self.body(message.build()).build().post()
+        deduplicator.addDeduplicated(str(message_id))
+        deduplicator.save()
 
 class PollerReqBuilder(ReqBuilder):
     def __init__(self, url):

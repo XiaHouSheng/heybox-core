@@ -25,7 +25,7 @@ params = {
     "hkey": hkey,
     "_time": _time,
     "nonce": nonce, 
-    "qr": "bb00e846-5027-11f1-9a50-be8d298d9e02"
+    "qr": "ea1abf18-5062-11f1-b2e8-12271a9ede9b"
 }
 while True:
     resp = requests.get(url, params=params)
@@ -35,6 +35,6 @@ while True:
             print("COOKIE:", resp.cookies.get_dict())
     print("状态码:", resp.status_code)
     print("返回内容:", resp.text)
-    time.sleep(1)
+    time.sleep(5)
 
 #key = error | value = wait ready cancel ok

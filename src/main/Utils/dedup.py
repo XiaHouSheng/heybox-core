@@ -11,7 +11,6 @@ class Deduplicator:
         file = open(path, "r", encoding = "utf-8")
         content = json.load(file)
         self.dedup = set(content["dedup"])
-        print(self.dedup)
 
     def save(self):
         with open(path, "w", encoding = "utf-8") as file:
